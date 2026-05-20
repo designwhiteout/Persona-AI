@@ -86,6 +86,7 @@ async def stream_reply(
 ) -> AsyncGenerator[str, None]:
     """
     Yields text chunks for SSE streaming.
+    Uses standard stream=True for broad API compatibility (OpenAI / SiliconFlow / etc.).
     Appends messages to session after stream completes.
     """
     client = AsyncOpenAI(
@@ -96,15 +97,18 @@ async def stream_reply(
     session.messages.append(ChatMessage(role="user", content=user_message))
     messages = _build_messages(character, session)
 
-    full_reply = []
-    async with client.chat.completions.stream(
+    full_reply: list[str] = []
+    stream = await client.chat.completions.create(
         model=settings.chat_model,
         messages=messages,
         temperature=0.85,
         max_tokens=1024,
-    ) as stream:
-        async for chunk in stream.text_stream:
-            full_reply.append(chunk)
-            yield chunk
+        stream=True,
+    )
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content if chunk.choices else None
+        if delta:
+            full_reply.append(delta)
+            yield delta
 
     session.messages.append(ChatMessage(role="assistant", content="".join(full_reply)))

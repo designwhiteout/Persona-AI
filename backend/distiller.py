@@ -3,6 +3,7 @@ Character distillation: extracts personality traits, speech patterns,
 and generates a system prompt from sample texts using OpenAI.
 """
 import json
+import re
 from openai import AsyncOpenAI
 
 from models import CharacterProfile, CharacterTrait, SpeechPattern
@@ -10,7 +11,7 @@ from config import settings
 
 _DISTILL_SYSTEM = """You are an expert character analyst and writer.
 Your job is to deeply analyze text samples and extract the essential essence of a character.
-Always respond with valid JSON matching the requested schema exactly."""
+IMPORTANT: Your entire response must be a single valid JSON object. Do not include any text before or after the JSON. Do not use markdown code fences."""
 
 _DISTILL_PROMPT = """Analyze the following character information and sample texts, then extract the character's essence.
 
@@ -74,11 +75,14 @@ async def distill_character(
             {"role": "system", "content": _DISTILL_SYSTEM},
             {"role": "user", "content": prompt},
         ],
-        response_format={"type": "json_object"},
         temperature=0.3,
     )
 
-    raw = json.loads(response.choices[0].message.content)
+    content = response.choices[0].message.content.strip()
+    # Strip markdown code fences if the model wraps the JSON anyway
+    content = re.sub(r"^```(?:json)?\s*", "", content)
+    content = re.sub(r"\s*```$", "", content)
+    raw = json.loads(content)
 
     traits = [CharacterTrait(**t) for t in raw.get("traits", [])]
     speech_pattern = SpeechPattern(**raw["speech_pattern"])
