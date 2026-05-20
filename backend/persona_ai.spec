@@ -36,7 +36,7 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, a.binaries, a.datas, [],
-    name='PersonaAI',
+    name='Persona AI V2',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

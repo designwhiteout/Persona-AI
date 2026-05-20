@@ -1,7 +1,7 @@
 @echo off
-echo Building PersonaAI.exe...
+echo Building Persona AI V2.exe...
 pip install pyinstaller -q
 pyinstaller persona_ai.spec --clean --noconfirm
 echo.
-echo Done! Find PersonaAI.exe in dist\
+echo Done! Find "Persona AI V2.exe" in dist\
 pause

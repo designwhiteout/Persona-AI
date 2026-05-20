@@ -26,7 +26,7 @@ import chat
 
 
 app = FastAPI(
-    title="Persona AI",
+    title="Persona AI V2",
     description="Character distillation and roleplay API powered by OpenAI",
     version="1.0.0",
 )
@@ -49,7 +49,7 @@ async def root():
     _index = _os.path.join(_static, "index.html")
     if _os.path.exists(_index):
         return FileResponse(_index)
-    return {"message": "Persona AI backend running"}
+    return {"message": "Persona AI V2 backend running"}
 
 
 # ── Characters ─────────────────────────────────────────────────────────────────
