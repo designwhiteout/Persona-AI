@@ -311,10 +311,8 @@ async def get_session(session_id: str):
 
 @app.delete("/sessions/{session_id}", status_code=204)
 async def clear_session(session_id: str):
-    path = storage._session_path(session_id)
-    if not path.exists():
+    if not storage.delete_session(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    path.unlink()
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
