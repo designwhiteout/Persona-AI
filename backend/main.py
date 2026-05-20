@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 import json
 import asyncio
 from typing import Optional
@@ -36,6 +38,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+import os as _os
+_static = settings.static_dir or _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "static")
+if _os.path.isdir(_static):
+    app.mount("/static", StaticFiles(directory=_static), name="static")
+
+@app.get("/", include_in_schema=False)
+async def root():
+    _index = _os.path.join(_static, "index.html")
+    if _os.path.exists(_index):
+        return FileResponse(_index)
+    return {"message": "Persona AI backend running"}
 
 
 # ── Characters ─────────────────────────────────────────────────────────────────
@@ -297,11 +311,58 @@ async def get_session(session_id: str):
 
 @app.delete("/sessions/{session_id}", status_code=204)
 async def clear_session(session_id: str):
-    from pathlib import Path
-    path = Path(f"{settings.data_dir}/sessions/{session_id}.json")
+    path = storage._session_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Session not found")
     path.unlink()
+
+
+# ── Config ─────────────────────────────────────────────────────────────────────
+
+@app.get("/api/config")
+async def get_config():
+    return {
+        "api_key_set": bool(settings.openai_api_key),
+        "base_url": settings.openai_base_url,
+        "chat_model": settings.chat_model,
+        "embedding_model": settings.embedding_model,
+        "distill_model": settings.distill_model,
+    }
+
+class ConfigUpdateRequest(BaseModel):
+    openai_api_key: Optional[str] = None
+    openai_base_url: Optional[str] = None
+    chat_model: Optional[str] = None
+    embedding_model: Optional[str] = None
+    distill_model: Optional[str] = None
+
+@app.post("/api/config")
+async def update_config(body: ConfigUpdateRequest):
+    import os as _os
+    from pathlib import Path as _Path
+    app_dir = _os.path.dirname(_os.path.abspath(__file__))
+    if getattr(_os.sys, 'frozen', False):
+        app_dir = _os.path.dirname(_os.sys.executable)
+    env_path = _Path(app_dir) / ".env"
+    lines = env_path.read_text(encoding="utf-8").splitlines() if env_path.exists() else []
+    updates = {k.upper(): v for k, v in body.model_dump(exclude_none=True).items()}
+    keys_written = set()
+    new_lines = []
+    for line in lines:
+        key = line.split("=")[0].strip()
+        if key in updates:
+            new_lines.append(f"{key}={updates[key]}")
+            keys_written.add(key)
+        else:
+            new_lines.append(line)
+    for key, val in updates.items():
+        if key not in keys_written:
+            new_lines.append(f"{key}={val}")
+    env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    # Apply to live settings
+    for attr, val in body.model_dump(exclude_none=True).items():
+        setattr(settings, attr, val)
+    return {"ok": True}
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────

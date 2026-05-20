@@ -10,16 +10,16 @@ from config import settings
 
 def _ensure_dirs():
     Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
-    Path(f"{settings.data_dir}/characters").mkdir(exist_ok=True)
-    Path(f"{settings.data_dir}/sessions").mkdir(exist_ok=True)
+    (Path(settings.data_dir) / "characters").mkdir(exist_ok=True)
+    (Path(settings.data_dir) / "sessions").mkdir(exist_ok=True)
 
 
 def _char_path(character_id: str) -> Path:
-    return Path(f"{settings.data_dir}/characters/{character_id}.json")
+    return Path(settings.data_dir) / "characters" / f"{character_id}.json"
 
 
 def _session_path(session_id: str) -> Path:
-    return Path(f"{settings.data_dir}/sessions/{session_id}.json")
+    return Path(settings.data_dir) / "sessions" / f"{session_id}.json"
 
 
 def save_character(character: CharacterProfile) -> None:
@@ -40,7 +40,7 @@ def load_character(character_id: str) -> Optional[CharacterProfile]:
 def list_characters() -> list[CharacterProfile]:
     _ensure_dirs()
     chars = []
-    for p in Path(f"{settings.data_dir}/characters").glob("*.json"):
+    for p in (Path(settings.data_dir) / "characters").glob("*.json"):
         try:
             with open(p, encoding="utf-8") as f:
                 chars.append(CharacterProfile(**json.load(f)))
@@ -74,7 +74,7 @@ def load_session(session_id: str) -> Optional[ChatSession]:
 def list_sessions(character_id: str) -> list[ChatSession]:
     _ensure_dirs()
     sessions = []
-    for p in Path(f"{settings.data_dir}/sessions").glob("*.json"):
+    for p in (Path(settings.data_dir) / "sessions").glob("*.json"):
         try:
             with open(p, encoding="utf-8") as f:
                 s = ChatSession(**json.load(f))
